@@ -1,0 +1,201 @@
+export type SupportedLang = 'en' | 'es' | 'hi' | 'fr' | 'ja' | 'de';
+
+export interface Translations {
+  siteTitle: string;
+  tagline: string;
+  uploadButton: string;
+  cloudStatus: string;
+  zeroLaptopStorage: string;
+  upTo7Gb: string;
+  anyFormat: string;
+  multiLanguage: string;
+  searchPlaceholder: string;
+  allVideos: string;
+  audioTracks: string;
+  subtitles: string;
+  cloudTranscoding: string;
+  selectAudio: string;
+  selectSubtitles: string;
+  transcript: string;
+  resolutions: string;
+  cloudProvider: string;
+  startUpload: string;
+  pause: string;
+  resume: string;
+  cancel: string;
+  uploadSpeed: string;
+  eta: string;
+  configureCloud: string;
+  storageBadge: string;
+}
+
+export const DICTIONARY: Record<SupportedLang, Translations> = {
+  en: {
+    siteTitle: 'AuraCloud Stream',
+    tagline: '7GB+ Cloud Video Vault & Universal Multi-Language Streaming',
+    uploadButton: 'Upload 7GB Video',
+    cloudStatus: '100% Cloud-Native (0 GB Stored Locally)',
+    zeroLaptopStorage: 'Direct Browser-to-Cloud Uploads',
+    upTo7Gb: 'Up to 7 GB per Video',
+    anyFormat: 'Transcodes MKV, AVI, MOV, MP4 to HLS',
+    multiLanguage: 'Multi-Audio Dubs & Subtitles',
+    searchPlaceholder: 'Search titles, formats (MKV, AVI), or languages...',
+    allVideos: 'Cloud Video Library',
+    audioTracks: 'Audio Languages',
+    subtitles: 'Subtitles & Captions',
+    cloudTranscoding: 'Cloud Transcoding Pipeline',
+    selectAudio: 'Switch Audio Track',
+    selectSubtitles: 'Subtitles',
+    transcript: 'Interactive Transcript',
+    resolutions: 'Quality',
+    cloudProvider: 'Cloud Storage',
+    startUpload: 'Start Cloud Chunked Upload',
+    pause: 'Pause',
+    resume: 'Resume',
+    cancel: 'Cancel',
+    uploadSpeed: 'Upload Speed',
+    eta: 'Time Remaining',
+    configureCloud: 'Cloud Settings',
+    storageBadge: 'Cloud Stored',
+  },
+  es: {
+    siteTitle: 'AuraCloud Stream',
+    tagline: 'Bóveda de Video en la Nube de 7GB y Transmisión Multiidioma',
+    uploadButton: 'Subir Video de 7GB',
+    cloudStatus: '100% en la Nube (0 GB en tu laptop)',
+    zeroLaptopStorage: 'Cargas directas del navegador a la nube',
+    upTo7Gb: 'Hasta 7 GB por video',
+    anyFormat: 'Transcodifica MKV, AVI, MOV, MP4 a HLS',
+    multiLanguage: 'Múltiples audios y subtítulos',
+    searchPlaceholder: 'Buscar por título, formato o idioma...',
+    allVideos: 'Biblioteca en la Nube',
+    audioTracks: 'Idiomas de Audio',
+    subtitles: 'Subtítulos',
+    cloudTranscoding: 'Pipeline de Transcodificación',
+    selectAudio: 'Cambiar Pista de Audio',
+    selectSubtitles: 'Subtítulos',
+    transcript: 'Transcripción Interactiva',
+    resolutions: 'Calidad',
+    cloudProvider: 'Almacenamiento en Nube',
+    startUpload: 'Iniciar Carga Fragmentada',
+    pause: 'Pausar',
+    resume: 'Reanudar',
+    cancel: 'Cancelar',
+    uploadSpeed: 'Velocidad',
+    eta: 'Tiempo Restante',
+    configureCloud: 'Ajustes de Nube',
+    storageBadge: 'En la Nube',
+  },
+  hi: {
+    siteTitle: 'ऑराक्लाउड स्ट्रीम',
+    tagline: '7GB+ क्लाउड वीडियो स्टोरेज और बहुभाषी स्ट्रीमिंग',
+    uploadButton: '7GB वीडियो अपलोड करें',
+    cloudStatus: '100% क्लाउड (लैपटॉप में 0 GB स्टोरेज)',
+    zeroLaptopStorage: 'सीधा ब्राउज़र से क्लाउड पर अपलोड',
+    upTo7Gb: 'प्रत्येक वीडियो 7 GB तक',
+    anyFormat: 'MKV, AVI, MOV, MP4 को HLS में बदलें',
+    multiLanguage: 'मल्टी-ऑडियो डब और सबटाइटल',
+    searchPlaceholder: 'वीडियो, प्रारूप या भाषा खोजें...',
+    allVideos: 'क्लाउड वीडियो लाइब्रेरी',
+    audioTracks: 'ऑडियो भाषाएँ',
+    subtitles: 'उपशीर्षक (सबटाइटल्स)',
+    cloudTranscoding: 'क्लाउड ट्रांसकोडिंग',
+    selectAudio: 'ऑडियो ट्रैक बदलें',
+    selectSubtitles: 'सबटाइटल',
+    transcript: 'इंटरएक्टिव ट्रांसक्रिप्ट',
+    resolutions: 'गुणवत्ता',
+    cloudProvider: 'क्लाउड स्टोरेज',
+    startUpload: 'अपलोड शुरू करें',
+    pause: 'रोकें',
+    resume: 'पुनः आरंभ करें',
+    cancel: 'रद्द करें',
+    uploadSpeed: 'अपलोड गति',
+    eta: 'शेष समय',
+    configureCloud: 'क्लाउड सेटिंग्स',
+    storageBadge: 'क्लाउड में सुरक्षित',
+  },
+  fr: {
+    siteTitle: 'AuraCloud Stream',
+    tagline: 'Stockage Vidéo Cloud 7GB+ et Diffusion Multilingue',
+    uploadButton: 'Téléverser Vidéo 7GB',
+    cloudStatus: '100% Cloud (0 Go sur votre ordinateur)',
+    zeroLaptopStorage: 'Téléversements directs navigateur vers cloud',
+    upTo7Gb: 'Jusqu\'à 7 Go par vidéo',
+    anyFormat: 'Transcode MKV, AVI, MOV, MP4 vers HLS',
+    multiLanguage: 'Pistes audio et sous-titres multiples',
+    searchPlaceholder: 'Rechercher titres, formats ou langues...',
+    allVideos: 'Vidéothèque Cloud',
+    audioTracks: 'Langues Audio',
+    subtitles: 'Sous-titres',
+    cloudTranscoding: 'Transcodage Cloud',
+    selectAudio: 'Changer la piste audio',
+    selectSubtitles: 'Sous-titres',
+    transcript: 'Transcription Interactive',
+    resolutions: 'Qualité',
+    cloudProvider: 'Stockage Cloud',
+    startUpload: 'Démarrer l\'envoi fractionné',
+    pause: 'Pause',
+    resume: 'Reprendre',
+    cancel: 'Annuler',
+    uploadSpeed: 'Vitesse de transfert',
+    eta: 'Temps restant',
+    configureCloud: 'Paramètres Cloud',
+    storageBadge: 'Stocké sur le Cloud',
+  },
+  ja: {
+    siteTitle: 'AuraCloud Stream',
+    tagline: '7GB対応 クラウド動画ストレージ & 多言語ストリーミング',
+    uploadButton: '7GB動画をアップロード',
+    cloudStatus: '100% クラウド保存 (PC容量消費ゼロ)',
+    zeroLaptopStorage: 'ブラウザからクラウドへ直接送信',
+    upTo7Gb: '1動画最大7GB対応',
+    anyFormat: 'MKV、AVI、MOV、MP4をHLSへ自動変換',
+    multiLanguage: 'マルチ音声・多言語字幕対応',
+    searchPlaceholder: 'タイトル・形式・言語を検索...',
+    allVideos: 'クラウド動画ライブラリ',
+    audioTracks: '音声言語',
+    subtitles: '字幕',
+    cloudTranscoding: 'クラウドトランスコーディング',
+    selectAudio: '音声言語を変更',
+    selectSubtitles: '字幕言語',
+    transcript: '連動テキスト書き起こし',
+    resolutions: '画質',
+    cloudProvider: 'クラウドストレージ',
+    startUpload: '分割アップロード開始',
+    pause: '一時停止',
+    resume: '再開',
+    cancel: 'キャンセル',
+    uploadSpeed: '通信速度',
+    eta: '残り時間',
+    configureCloud: 'クラウド設定',
+    storageBadge: 'クラウド保管',
+  },
+  de: {
+    siteTitle: 'AuraCloud Stream',
+    tagline: '7GB+ Cloud-Videospeicher & Mehrsprachiges Streaming',
+    uploadButton: '7GB Video hochladen',
+    cloudStatus: '100% Cloud-basiert (0 GB lokaler Speicher)',
+    zeroLaptopStorage: 'Direkt-Upload vom Browser in die Cloud',
+    upTo7Gb: 'Bis zu 7 GB pro Video',
+    anyFormat: 'Transkodiert MKV, AVI, MOV, MP4 zu HLS',
+    multiLanguage: 'Mehrere Audiospuren & Untertitel',
+    searchPlaceholder: 'Titel, Formate oder Sprachen suchen...',
+    allVideos: 'Cloud-Videobibliothek',
+    audioTracks: 'Audiosprachen',
+    subtitles: 'Untertitel',
+    cloudTranscoding: 'Cloud-Transkodierung',
+    selectAudio: 'Audiospur wechseln',
+    selectSubtitles: 'Untertitel',
+    transcript: 'Interaktives Transkript',
+    resolutions: 'Qualität',
+    cloudProvider: 'Cloud-Speicher',
+    startUpload: 'Upload starten',
+    pause: 'Pause',
+    resume: 'Fortsetzen',
+    cancel: 'Abbrechen',
+    uploadSpeed: 'Geschwindigkeit',
+    eta: 'Verbleibende Zeit',
+    configureCloud: 'Cloud-Einstellungen',
+    storageBadge: 'In der Cloud',
+  },
+};
