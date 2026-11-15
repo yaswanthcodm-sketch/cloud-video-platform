@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   Lock,
   Mail,
-  Key,
   X,
   Loader2,
   AlertCircle,
@@ -25,7 +24,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
-  const [email, setEmail] = useState('yaswanthcodm@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,12 +69,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
     }
   };
 
-  const handleAutofill = () => {
-    setEmail('yaswanthcodm@gmail.com');
-    setPassword('Doraemon@143');
-    setErrorMessage(null);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm select-none">
       <div className="relative w-full max-w-md bg-white border border-[#E5EAF2] rounded-3xl shadow-2xl p-6 sm:p-8 text-[#172B4D] animate-in fade-in zoom-in-95 duration-200">
@@ -106,21 +99,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           
-          {/* Quick Credential Helper Pill */}
-          <div className="p-3 rounded-2xl bg-[#F7FAFF] border border-[#E5EAF2] flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Key className="w-3.5 h-3.5 text-[#2196F3]" />
-              <span className="text-[11px] text-[#718096]">Admin Account Configured</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleAutofill}
-              className="text-[11px] font-bold text-[#2196F3] hover:underline"
-            >
-              Fill Credentials
-            </button>
-          </div>
-
           {/* Error Banner */}
           {errorMessage && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-[#DC2626] flex items-center gap-2">
@@ -149,7 +127,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="yaswanthcodm@gmail.com"
+                placeholder="Enter admin email..."
                 className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#F7FAFF] border border-[#E5EAF2] text-xs text-[#172B4D] focus:bg-white focus:border-[#2196F3] focus:outline-none"
               />
             </div>

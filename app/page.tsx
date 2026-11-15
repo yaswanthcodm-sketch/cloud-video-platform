@@ -64,7 +64,7 @@ export default function Home() {
         const data = await res.json();
         if (data.authenticated) {
           setIsAdmin(true);
-          setAdminEmail(data.user?.email || 'yaswanthcodm@gmail.com');
+          setAdminEmail(data.user?.email || 'admin');
           if (typeof window !== 'undefined') {
             localStorage.setItem('admin_logged_in', 'true');
           }
@@ -94,7 +94,7 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('admin_logged_in', 'true');
     }
-    showToast(`Welcome back, Admin (${email})!`);
+    showToast('Welcome back, Administrator!');
   };
 
   const handleLogout = async () => {

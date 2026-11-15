@@ -41,7 +41,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   isAdmin = false,
   onOpenLogin,
   onLogout,
-  adminEmail = 'yaswanthcodm@gmail.com',
+  adminEmail = 'Admin',
 }) => {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -229,7 +229,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
             </div>
             <div className="hidden lg:block text-left">
               <div className="text-xs font-bold text-[#172B4D]">
-                {isAdmin ? 'Yaswanth (Admin)' : 'Viewer (Guest)'}
+                {isAdmin ? 'Administrator' : 'Viewer (Guest)'}
               </div>
               <div className="text-[10px] text-[#718096]">
                 {isAdmin ? 'Upload Enabled' : 'Watch Only'}
@@ -245,7 +245,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                   {isAdmin ? 'Administrator Account' : 'Public Viewer'}
                 </div>
                 <div className="text-[11px] text-[#718096] truncate">
-                  {isAdmin ? adminEmail : 'Watching enabled for all videos'}
+                  {isAdmin ? 'Full Upload & Storage Access' : 'Watching enabled for all videos'}
                 </div>
               </div>
 

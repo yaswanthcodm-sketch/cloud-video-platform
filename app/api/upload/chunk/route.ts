@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Unauthorized: Administrator login (yaswanthcodm@gmail.com) required to upload videos.',
+          error: 'Unauthorized: Administrator login required to upload videos.',
         },
         { status: 401 }
       );
