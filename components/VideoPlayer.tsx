@@ -338,6 +338,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               return;
             }
 
+            if (retryAttempt === 1 && video.mp4FallbackUrl && video.mp4FallbackUrl.startsWith('http')) {
+              console.log('Backend proxy failed, trying direct remote CDN fallback...');
+              setRetryAttempt(2);
+              if (videoRef.current) {
+                videoRef.current.src = video.mp4FallbackUrl;
+                videoRef.current.load();
+              }
+              return;
+            }
+
             let msg = 'Could not load stream for this video. Please check your network or format.';
             if (video.status === 'processing') {
               msg = `Video format (${video.format}) is currently being converted to browser-compatible H.264/AAC with FFmpeg. Please wait a moment and retry.`;

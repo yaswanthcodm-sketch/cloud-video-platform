@@ -15,6 +15,7 @@ export interface VideoRecord {
   storagePath?: string;
   playbackUrl: string;
   mp4FallbackUrl?: string;
+  hlsStreamUrl?: string;
   fileSizeBytes: number;
   fileSizeDisplay: string;
   durationSeconds: number;
