@@ -1,5 +1,95 @@
 [
   {
+    "id": "video_a_red_car",
+    "title": "Video A - Red Car Test",
+    "description": "Deterministic Production Benchmark Video A - High Visibility Red Car with 440Hz tone. Permanent ID: video_a_red_car",
+    "originalFileName": "video_a_red_car.mp4",
+    "storageKey": "videos/video_a_red_car/video_a_red_car.mp4",
+    "storagePath": "public/samples/video_a_red_car.mp4",
+    "playbackUrl": "/api/stream/video_a_red_car",
+    "fileSizeBytes": 76840,
+    "fileSizeDisplay": "75.0 KB",
+    "durationSeconds": 6,
+    "durationDisplay": "0m 06s",
+    "format": "MP4",
+    "mimeType": "video/mp4",
+    "thumbnailUrl": "/samples/thumb_red_car.jpg",
+    "status": "ready",
+    "resolutions": [
+      "720p HD",
+      "480p"
+    ],
+    "cloudProvider": "local",
+    "cloudStorageLocation": "public/samples/video_a_red_car.mp4",
+    "createdAt": "2026-11-15T01:00:00.000Z",
+    "updatedAt": "2026-11-15T01:00:00.000Z",
+    "views": 24,
+    "category": "Benchmark",
+    "ownerId": "admin",
+    "audioTracks": [
+      {
+        "id": "aud-a-1",
+        "languageCode": "en",
+        "label": "Stereo (440Hz Reference)",
+        "codec": "AAC",
+        "isDefault": true
+      }
+    ],
+    "subtitleTracks": [
+      {
+        "id": "sub-a-1",
+        "languageCode": "en",
+        "label": "English [CC]",
+        "isDefault": true
+      }
+    ]
+  },
+  {
+    "id": "video_b_blue_car",
+    "title": "Video B - Blue Car Test",
+    "description": "Deterministic Production Benchmark Video B - High Visibility Blue Car with 880Hz tone. Permanent ID: video_b_blue_car",
+    "originalFileName": "video_b_blue_car.mp4",
+    "storageKey": "videos/video_b_blue_car/video_b_blue_car.mp4",
+    "storagePath": "public/samples/video_b_blue_car.mp4",
+    "playbackUrl": "/api/stream/video_b_blue_car",
+    "fileSizeBytes": 73780,
+    "fileSizeDisplay": "72.0 KB",
+    "durationSeconds": 6,
+    "durationDisplay": "0m 06s",
+    "format": "MP4",
+    "mimeType": "video/mp4",
+    "thumbnailUrl": "/samples/thumb_blue_car.jpg",
+    "status": "ready",
+    "resolutions": [
+      "720p HD",
+      "480p"
+    ],
+    "cloudProvider": "local",
+    "cloudStorageLocation": "public/samples/video_b_blue_car.mp4",
+    "createdAt": "2026-11-15T00:59:00.000Z",
+    "updatedAt": "2026-11-15T00:59:00.000Z",
+    "views": 18,
+    "category": "Benchmark",
+    "ownerId": "admin",
+    "audioTracks": [
+      {
+        "id": "aud-b-1",
+        "languageCode": "en",
+        "label": "Stereo (880Hz Reference)",
+        "codec": "AAC",
+        "isDefault": true
+      }
+    ],
+    "subtitleTracks": [
+      {
+        "id": "sub-b-1",
+        "languageCode": "en",
+        "label": "English [CC]",
+        "isDefault": true
+      }
+    ]
+  },
+  {
     "id": "vid_1794660415937_sltmtar",
     "title": "The Garden of Words - Anime Salt",
     "description": "Uploaded via chunked storage engine",
@@ -42,8 +132,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:47:12.519Z",
-    "updatedAt": "2026-11-14T12:47:12.519Z",
-    "mp4FallbackUrl": "https://vjs.zencdn.net/v/oceans.mp4"
+    "updatedAt": "2026-11-14T12:47:12.519Z"
   },
   {
     "id": "vid_1794660285563_sx3r3co",
@@ -89,8 +178,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:44:48.518Z",
-    "updatedAt": "2026-11-14T12:44:48.518Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+    "updatedAt": "2026-11-14T12:44:48.518Z"
   },
   {
     "id": "vid_1794660181791_qqeqxph",
@@ -135,8 +223,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:43:32.143Z",
-    "updatedAt": "2026-11-14T12:43:32.143Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+    "updatedAt": "2026-11-14T12:43:32.143Z"
   },
   {
     "id": "vid_1794660048315_ru5051q",
@@ -189,8 +276,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:41:42.741Z",
-    "updatedAt": "2026-11-14T12:41:42.741Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/video/movie_300.mp4"
+    "updatedAt": "2026-11-14T12:41:42.741Z"
   },
   {
     "id": "vid_1794659895831_a6zwi10",
@@ -243,8 +329,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:39:34.493Z",
-    "updatedAt": "2026-11-14T12:39:34.493Z",
-    "mp4FallbackUrl": "https://vjs.zencdn.net/v/oceans.mp4"
+    "updatedAt": "2026-11-14T12:39:34.493Z"
   },
   {
     "id": "vid_1794659807243_ec7p5f7",
@@ -297,8 +382,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:37:23.770Z",
-    "updatedAt": "2026-11-14T12:37:23.770Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+    "updatedAt": "2026-11-14T12:37:23.770Z"
   },
   {
     "id": "vid_1794659249428_y8vx1xw",
@@ -351,8 +435,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:31:27.802Z",
-    "updatedAt": "2026-11-14T12:31:27.802Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+    "updatedAt": "2026-11-14T12:31:27.802Z"
   },
   {
     "id": "vid_1794657220376_dwtjwt8",
@@ -405,8 +488,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T11:54:32.571Z",
-    "updatedAt": "2026-11-14T11:54:32.571Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/video/movie_300.mp4"
+    "updatedAt": "2026-11-14T11:54:32.571Z"
   },
   {
     "id": "vid_1794657067966_nr5vrgu",
@@ -452,8 +534,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T11:51:32.739Z",
-    "updatedAt": "2026-11-14T11:51:32.739Z",
-    "mp4FallbackUrl": "https://vjs.zencdn.net/v/oceans.mp4"
+    "updatedAt": "2026-11-14T11:51:32.739Z"
   },
   {
     "id": "vid_1794655927193_f7xjp1o",
@@ -513,8 +594,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T11:33:03.324Z",
-    "updatedAt": "2026-11-14T11:33:03.324Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+    "updatedAt": "2026-11-14T11:33:03.324Z"
   },
   {
     "id": "vid_1794654266909_z2ihpvt",
@@ -574,8 +654,7 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T11:05:48.503Z",
-    "updatedAt": "2026-11-14T11:05:48.503Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+    "updatedAt": "2026-11-14T11:05:48.503Z"
   },
   {
     "id": "vid_1794648424917_ycjd3lq",
@@ -635,7 +714,6 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T09:27:51.305Z",
-    "updatedAt": "2026-11-14T09:27:51.305Z",
-    "mp4FallbackUrl": "https://media.w3.org/2010/05/video/movie_300.mp4"
+    "updatedAt": "2026-11-14T09:27:51.305Z"
   }
 ]

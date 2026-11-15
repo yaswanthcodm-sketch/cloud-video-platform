@@ -126,10 +126,17 @@ export default function Home() {
           setVideos(data.videos);
           setStats(data.stats);
 
-          // If no video is selected yet, select the first video
+          // If no video is selected yet, check URL query param first, then fallback to first video
           setSelectedVideoId((prev) => {
             if (prev && data.videos.some((v: VideoItem) => v.id === prev)) {
               return prev;
+            }
+            if (typeof window !== 'undefined') {
+              const urlParams = new URLSearchParams(window.location.search);
+              const requestedVid = urlParams.get('v');
+              if (requestedVid && data.videos.some((v: VideoItem) => v.id === requestedVid)) {
+                return requestedVid;
+              }
             }
             return data.videos[0]?.id || null;
           });
@@ -149,9 +156,14 @@ export default function Home() {
   // CRITICAL FIX: Safe lookup of current video by unique ID
   const currentVideo = videos.find((v) => v.id === selectedVideoId) || videos[0] || null;
 
-  // Handle Video Selection
+  // Handle Video Selection with URL synchronization
   const handleSelectVideo = (video: VideoItem) => {
     setSelectedVideoId(video.id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', video.id);
+      window.history.pushState({}, '', url.toString());
+    }
     // Smooth scroll to player container if in home view
     if (activeTab === 'home') {
       window.scrollTo({ top: 380, behavior: 'smooth' });
@@ -163,14 +175,26 @@ export default function Home() {
     if (!currentVideo || videos.length <= 1) return;
     const currentIndex = videos.findIndex((v) => v.id === currentVideo.id);
     const nextIndex = (currentIndex + 1) % videos.length;
-    setSelectedVideoId(videos[nextIndex].id);
+    const nextVid = videos[nextIndex];
+    setSelectedVideoId(nextVid.id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', nextVid.id);
+      window.history.pushState({}, '', url.toString());
+    }
   };
 
   const handlePrevVideo = () => {
     if (!currentVideo || videos.length <= 1) return;
     const currentIndex = videos.findIndex((v) => v.id === currentVideo.id);
     const prevIndex = (currentIndex - 1 + videos.length) % videos.length;
-    setSelectedVideoId(videos[prevIndex].id);
+    const prevVid = videos[prevIndex];
+    setSelectedVideoId(prevVid.id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', prevVid.id);
+      window.history.pushState({}, '', url.toString());
+    }
   };
 
   // Handle Video Upload Completion

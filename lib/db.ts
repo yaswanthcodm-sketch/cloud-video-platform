@@ -51,6 +51,68 @@ export interface StorageStats {
 // Initial seed data with distinct videos, distinct URLs, and proper unique IDs
 const SEED_VIDEOS: VideoRecord[] = [
   {
+    id: 'video_a_red_car',
+    title: 'Video A - Red Car Test',
+    description: 'Deterministic Production Benchmark Video A - High Visibility Red Car with 440Hz tone. Permanent ID: video_a_red_car',
+    originalFileName: 'video_a_red_car.mp4',
+    storageKey: 'videos/video_a_red_car/video_a_red_car.mp4',
+    storagePath: 'public/samples/video_a_red_car.mp4',
+    playbackUrl: '/api/stream/video_a_red_car',
+    fileSizeBytes: 76840,
+    fileSizeDisplay: '75.0 KB',
+    durationSeconds: 6,
+    durationDisplay: '0m 06s',
+    format: 'MP4',
+    mimeType: 'video/mp4',
+    thumbnailUrl: '/samples/thumb_red_car.jpg',
+    status: 'ready',
+    resolutions: ['720p HD', '480p'],
+    cloudProvider: 'local',
+    cloudStorageLocation: 'public/samples/video_a_red_car.mp4',
+    createdAt: '2026-11-15T01:00:00.000Z',
+    updatedAt: '2026-11-15T01:00:00.000Z',
+    views: 24,
+    category: 'Benchmark',
+    ownerId: 'admin',
+    audioTracks: [
+      { id: 'aud-a-1', languageCode: 'en', label: 'Stereo (440Hz Reference)', codec: 'AAC', isDefault: true }
+    ],
+    subtitleTracks: [
+      { id: 'sub-a-1', languageCode: 'en', label: 'English [CC]', isDefault: true }
+    ]
+  },
+  {
+    id: 'video_b_blue_car',
+    title: 'Video B - Blue Car Test',
+    description: 'Deterministic Production Benchmark Video B - High Visibility Blue Car with 880Hz tone. Permanent ID: video_b_blue_car',
+    originalFileName: 'video_b_blue_car.mp4',
+    storageKey: 'videos/video_b_blue_car/video_b_blue_car.mp4',
+    storagePath: 'public/samples/video_b_blue_car.mp4',
+    playbackUrl: '/api/stream/video_b_blue_car',
+    fileSizeBytes: 73780,
+    fileSizeDisplay: '72.0 KB',
+    durationSeconds: 6,
+    durationDisplay: '0m 06s',
+    format: 'MP4',
+    mimeType: 'video/mp4',
+    thumbnailUrl: '/samples/thumb_blue_car.jpg',
+    status: 'ready',
+    resolutions: ['720p HD', '480p'],
+    cloudProvider: 'local',
+    cloudStorageLocation: 'public/samples/video_b_blue_car.mp4',
+    createdAt: '2026-11-15T00:59:00.000Z',
+    updatedAt: '2026-11-15T00:59:00.000Z',
+    views: 18,
+    category: 'Benchmark',
+    ownerId: 'admin',
+    audioTracks: [
+      { id: 'aud-b-1', languageCode: 'en', label: 'Stereo (880Hz Reference)', codec: 'AAC', isDefault: true }
+    ],
+    subtitleTracks: [
+      { id: 'sub-b-1', languageCode: 'en', label: 'English [CC]', isDefault: true }
+    ]
+  },
+  {
     id: 'vid-interstellar-master',
     title: 'Interstellar Odyssey: 4K Master Documentary',
     description: 'Deep-space exploratory mission cinematic captured in high-bitrate ProRes. Features full multi-language audio dubbing and synchronized subtitles.',

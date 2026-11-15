@@ -11,36 +11,78 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const startTime = Date.now();
+
   try {
     const { id } = await params;
+    const rangeHeader = req.headers.get('range');
+    const { searchParams } = new URL(req.url);
+    const proxyMode = searchParams.get('proxy') === 'true';
+
+    console.log(`[StreamAPI] [${reqId}] Incoming stream request for ID: "${id}"`);
+    console.log(`[StreamAPI] [${reqId}] Headers - Range: "${rangeHeader || 'full'}" | ProxyMode: ${proxyMode}`);
+
+    // 1. Establish single source of truth: lookup exact video by unique database ID
     const video = VideoDb.getById(id);
 
     if (!video) {
-      return new NextResponse('Video record not found in cloud database', { status: 404 });
+      console.warn(`[StreamAPI] [${reqId}] 404: Video not found in database for ID: "${id}"`);
+      return NextResponse.json(
+        {
+          error: 'Video not found',
+          message: `No video record exists with ID: "${id}"`,
+          id,
+          requestId: reqId,
+        },
+        {
+          status: 404,
+          headers: {
+            'X-Request-Id': reqId,
+            'X-Video-Id': id,
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(req.url);
-    const formatReq = searchParams.get('format');
-    const proxyMode = searchParams.get('proxy') === 'true';
-    const rangeHeader = req.headers.get('range');
+    console.log(
+      `[StreamAPI] [${reqId}] Match: "${video.title}" (ID: ${video.id}) | Key: "${video.storageKey}" | Provider: "${video.cloudProvider}"`
+    );
 
-    // 1. Backblaze B2 Cloud Storage Stream
+    // 2. Storage Strategy A: Deployed Static Samples (e.g. Video A Red Car / Video B Blue Car)
+    // Check public/samples/ directory for verified test video files
+    const publicSampleName = path.basename(video.originalFileName || '');
+    const sampleCandidates = [
+      video.cloudStorageLocation ? path.join(process.cwd(), video.cloudStorageLocation) : null,
+      path.join(process.cwd(), 'public', 'samples', publicSampleName),
+      path.join(process.cwd(), 'public', 'samples', `${video.id}.mp4`),
+    ].filter(Boolean) as string[];
+
+    for (const samplePath of sampleCandidates) {
+      if (fs.existsSync(samplePath)) {
+        console.log(`[StreamAPI] [${reqId}] Serving static verified file: ${samplePath}`);
+        return serveLocalFileStream(samplePath, rangeHeader, reqId, video.id, video.storageKey, 'video/mp4');
+      }
+    }
+
+    // 3. Storage Strategy B: Backblaze B2 Cloud Storage
     const isB2Video =
       video.cloudProvider === 'aws' ||
       video.cloudStorageLocation?.startsWith('b2://') ||
-      video.storageKey?.startsWith('videos/vid_b2_');
+      video.storageKey?.startsWith('videos/');
 
     if (isB2Video && isB2Configured()) {
       const cfg = getB2Config();
+      console.log(`[StreamAPI] [${reqId}] Routing to Backblaze B2 (Bucket: ${cfg.bucketName}, Key: ${video.storageKey})`);
 
+      // Option A: Direct stream proxy through backend with HTTP 206 Range
       if (proxyMode && rangeHeader) {
-        // Stream directly through backend proxy
         try {
           const b2Response = await getB2ObjectStream(cfg.bucketName, video.storageKey, rangeHeader);
           const bodyStream = b2Response.Body as any;
           const contentLength = b2Response.ContentLength?.toString() || '0';
           const contentRange = b2Response.ContentRange || '';
-          const contentType = b2Response.ContentType || 'video/mp4';
+          const contentType = b2Response.ContentType || video.mimeType || 'video/mp4';
 
           const webStream = new ReadableStream({
             start(controller) {
@@ -61,203 +103,235 @@ export async function GET(
               'Content-Length': contentLength,
               'Content-Type': contentType,
               'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'X-Request-Id': reqId,
+              'X-Video-Id': video.id,
+              'X-Storage-Key': video.storageKey,
             },
           });
-        } catch (b2ProxyErr) {
-          console.warn('B2 direct stream proxy failed, falling back to signed URL redirect:', b2ProxyErr);
+        } catch (b2ProxyErr: any) {
+          console.warn(`[StreamAPI] [${reqId}] B2 direct stream proxy failed:`, b2ProxyErr.message);
         }
       }
 
-      // Generate a secure, 6-hour presigned GET URL for Backblaze B2
+      // Option B: Presigned 6-hour direct GET URL for Backblaze B2 S3 storage
       try {
         const signedUrl = await getB2DownloadSignedUrl(cfg.bucketName, video.storageKey, 21600);
+        console.log(`[StreamAPI] [${reqId}] Generated B2 presigned download URL for key: ${video.storageKey}`);
         return NextResponse.redirect(signedUrl, 307);
       } catch (signErr: any) {
-        console.error('Failed to generate B2 signed URL:', signErr);
-        return new NextResponse(`Backblaze B2 Authorization Error: ${signErr.message}`, { status: 403 });
+        console.error(`[StreamAPI] [${reqId}] Failed to authorize B2 object:`, signErr.message);
+        return NextResponse.json(
+          {
+            error: 'Backblaze B2 Authorization Error',
+            message: signErr.message,
+            storageKey: video.storageKey,
+            bucket: cfg.bucketName,
+            requestId: reqId,
+          },
+          {
+            status: 403,
+            headers: { 'X-Request-Id': reqId, 'X-Video-Id': video.id },
+          }
+        );
       }
     }
 
-    // 2. Physical File Stream with Full HTTP 206 Range Seeking Support
+    // 4. Storage Strategy C: Local File Stream (On Localhost / Development)
     let streamFilePath = video.storagePath;
 
-    // Check default uploads folder for pre-remuxed web-compatible MP4
-    const uploadsDir = path.join(process.cwd(), 'data', 'videos');
-    const localWebMp4 = path.join(uploadsDir, `${video.id}_web_compatible.mp4`);
-
-    if (fs.existsSync(localWebMp4)) {
-      streamFilePath = localWebMp4;
-      if (video.storagePath !== localWebMp4) {
-        VideoDb.update(video.id, {
-          storagePath: localWebMp4,
-          format: 'MP4',
-          mimeType: 'video/mp4',
-          status: 'ready',
-        });
-      }
-    } else if (streamFilePath && fs.existsSync(streamFilePath)) {
-      const potentialMp4 = path.join(
+    // Check pre-remuxed web-compatible MP4 on disk
+    if (streamFilePath) {
+      const potentialWebMp4 = path.join(
         path.dirname(streamFilePath),
         `${video.id}_web_compatible.mp4`
       );
 
-      // Priority 1: If pre-remuxed web-compatible MP4 exists, use it
-      if (fs.existsSync(potentialMp4)) {
-        streamFilePath = potentialMp4;
-        if (video.storagePath !== potentialMp4) {
-          VideoDb.update(video.id, {
-            storagePath: potentialMp4,
-            format: 'MP4',
-            mimeType: 'video/mp4',
-            status: 'ready',
-          });
-        }
-      }
-      // Priority 2: If the current file is not genuine web MP4, fast-remux on the fly
-      else if (!VideoTranscoder.isRealMp4(streamFilePath)) {
-        console.log(`[StreamEngine] Detected non-web MP4 container for ${video.id}. Fast-remuxing to web MP4...`);
-        const remuxed = VideoTranscoder.fastRemuxSync(streamFilePath, potentialMp4);
-        if (remuxed) {
-          streamFilePath = potentialMp4;
-          VideoDb.update(video.id, {
-            storagePath: potentialMp4,
-            format: 'MP4',
-            mimeType: 'video/mp4',
-            status: 'ready',
-          });
-        }
+      if (fs.existsSync(potentialWebMp4)) {
+        streamFilePath = potentialWebMp4;
+      } else if (fs.existsSync(streamFilePath) && !VideoTranscoder.isRealMp4(streamFilePath)) {
+        console.log(`[StreamAPI] [${reqId}] Non-MP4 container detected on local disk. Fast-remuxing...`);
+        const remuxed = VideoTranscoder.fastRemuxSync(streamFilePath, potentialWebMp4);
+        if (remuxed) streamFilePath = potentialWebMp4;
       }
     }
 
     if (streamFilePath && fs.existsSync(streamFilePath)) {
-      const stat = fs.statSync(streamFilePath);
-      const fileSize = stat.size;
-      const mimeType = streamFilePath.endsWith('.mp4') ? 'video/mp4' : video.mimeType || 'video/mp4';
+      console.log(`[StreamAPI] [${reqId}] Serving local filesystem video: ${streamFilePath}`);
+      return serveLocalFileStream(
+        streamFilePath,
+        rangeHeader,
+        reqId,
+        video.id,
+        video.storageKey,
+        video.mimeType || 'video/mp4'
+      );
+    }
 
-      if (rangeHeader) {
-        // Parse HTTP Range: e.g. "bytes=0-1048575" or "bytes=1048576-"
-        const parts = rangeHeader.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
-        let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    // 5. Storage Strategy D: Dedicated Remote URL for THIS specific video (if configured)
+    if (video.playbackUrl && video.playbackUrl.startsWith('http')) {
+      console.log(`[StreamAPI] [${reqId}] Proxying dedicated remote URL: ${video.playbackUrl}`);
+      try {
+        const fetchHeaders: HeadersInit = {};
+        if (rangeHeader) fetchHeaders['Range'] = rangeHeader;
 
-        if (isNaN(start) || start >= fileSize) {
-          return new NextResponse('Requested range not satisfiable', {
-            status: 416,
-            headers: {
-              'Content-Range': `bytes */${fileSize}`,
-            },
-          });
-        }
-
-        if (end >= fileSize) {
-          end = fileSize - 1;
-        }
-
-        const chunkSize = end - start + 1;
-        const fileStream = fs.createReadStream(streamFilePath, { start, end });
-
-        const webStream = new ReadableStream({
-          start(controller) {
-            fileStream.on('data', (chunk) => controller.enqueue(chunk));
-            fileStream.on('end', () => controller.close());
-            fileStream.on('error', (err) => controller.error(err));
-          },
-          cancel() {
-            fileStream.destroy();
-          },
+        const remoteRes = await fetch(video.playbackUrl, {
+          headers: fetchHeaders,
+          redirect: 'follow',
         });
 
-        return new NextResponse(webStream, {
-          status: 206,
-          headers: {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunkSize.toString(),
-            'Content-Type': mimeType,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-          },
+        const responseHeaders = new Headers();
+        responseHeaders.set('Content-Type', remoteRes.headers.get('content-type') || 'video/mp4');
+        responseHeaders.set('Accept-Ranges', 'bytes');
+        responseHeaders.set('Cache-Control', 'public, max-age=3600');
+        responseHeaders.set('X-Request-Id', reqId);
+        responseHeaders.set('X-Video-Id', video.id);
+        responseHeaders.set('X-Storage-Key', video.storageKey);
+
+        const contentLength = remoteRes.headers.get('content-length');
+        if (contentLength) responseHeaders.set('Content-Length', contentLength);
+
+        const contentRange = remoteRes.headers.get('content-range');
+        if (contentRange) responseHeaders.set('Content-Range', contentRange);
+
+        return new NextResponse(remoteRes.body as any, {
+          status: remoteRes.status,
+          headers: responseHeaders,
         });
+      } catch (proxyErr: any) {
+        console.warn(`[StreamAPI] [${reqId}] Remote proxy failed:`, proxyErr.message);
+        return NextResponse.redirect(video.playbackUrl, 302);
       }
+    }
 
-      // Full file delivery (initial probe or non-seeking client)
-      const fileStream = fs.createReadStream(streamFilePath);
-      const webStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk));
-          fileStream.on('end', () => controller.close());
-          fileStream.on('error', (err) => controller.error(err));
-        },
-        cancel() {
-          fileStream.destroy();
-        },
-      });
+    // 6. STRICT ERROR: NO SILENT SUBSTITUTION!
+    // If the storage object for THIS exact video is not found, return explicit 404
+    console.error(
+      `[StreamAPI] [${reqId}] 404 Storage object not found for video: "${video.title}" (Key: ${video.storageKey})`
+    );
 
-      return new NextResponse(webStream, {
-        status: 200,
+    return NextResponse.json(
+      {
+        error: 'Video file not found in cloud storage',
+        id: video.id,
+        title: video.title,
+        storageKey: video.storageKey,
+        cloudProvider: video.cloudProvider,
+        message: isB2Configured()
+          ? `The object "${video.storageKey}" was not found in your Backblaze B2 bucket.`
+          : 'Backblaze B2 is not configured on this server, and the video file does not exist locally.',
+        requestId: reqId,
+      },
+      {
+        status: 404,
         headers: {
-          'Content-Length': fileSize.toString(),
-          'Content-Type': mimeType,
-          'Accept-Ranges': 'bytes',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Request-Id': reqId,
+          'X-Video-Id': video.id,
+          'X-Storage-Key': video.storageKey,
+        },
+      }
+    );
+  } catch (error: any) {
+    console.error(`[StreamAPI] [${reqId}] Unhandled stream exception:`, error);
+    return NextResponse.json(
+      {
+        error: 'Internal streaming server error',
+        message: error.message || 'Unknown stream error',
+        requestId: reqId,
+      },
+      {
+        status: 500,
+        headers: { 'X-Request-Id': reqId },
+      }
+    );
+  }
+}
+
+/**
+ * Helper to stream local files with full HTTP 206 Partial Content range seeking
+ */
+function serveLocalFileStream(
+  filePath: string,
+  rangeHeader: string | null,
+  reqId: string,
+  videoId: string,
+  storageKey: string,
+  defaultMime: string
+) {
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const mimeType = filePath.endsWith('.mp4') ? 'video/mp4' : defaultMime;
+
+  if (rangeHeader) {
+    const parts = rangeHeader.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+    if (isNaN(start) || start >= fileSize) {
+      return new NextResponse('Requested range not satisfiable', {
+        status: 416,
+        headers: {
+          'Content-Range': `bytes */${fileSize}`,
+          'X-Request-Id': reqId,
         },
       });
     }
 
-    // 3. Remote Cloud Stream Proxy with Full HTTP 206 Range Seeking
-    let remoteUrl = video.mp4FallbackUrl || video.hlsStreamUrl;
-    if (!remoteUrl && video.playbackUrl && video.playbackUrl.startsWith('http')) {
-      remoteUrl = video.playbackUrl;
+    if (end >= fileSize) {
+      end = fileSize - 1;
     }
 
-    // Default high-availability cloud streams if file is not locally on this serverless instance
-    if (!remoteUrl || !remoteUrl.startsWith('http')) {
-      const cloudStreams = [
-        'https://vjs.zencdn.net/v/oceans.mp4',
-        'https://media.w3.org/2010/05/sintel/trailer.mp4',
-        'https://media.w3.org/2010/05/bunny/trailer.mp4',
-        'https://media.w3.org/2010/05/video/movie_300.mp4',
-      ];
-      let hash = 0;
-      for (let i = 0; i < id.length; i++) {
-        hash = (hash << 5) - hash + id.charCodeAt(i);
-        hash |= 0;
-      }
-      remoteUrl = cloudStreams[Math.abs(hash) % cloudStreams.length];
-    }
+    const chunkSize = end - start + 1;
+    const fileStream = fs.createReadStream(filePath, { start, end });
 
-    // Proxy the remote video stream with full HTTP 206 Range support
-    try {
-      const fetchHeaders: HeadersInit = {};
-      if (rangeHeader) {
-        fetchHeaders['Range'] = rangeHeader;
-      }
+    const webStream = new ReadableStream({
+      start(controller) {
+        fileStream.on('data', (chunk) => controller.enqueue(chunk));
+        fileStream.on('end', () => controller.close());
+        fileStream.on('error', (err) => controller.error(err));
+      },
+      cancel() {
+        fileStream.destroy();
+      },
+    });
 
-      const remoteRes = await fetch(remoteUrl, {
-        headers: fetchHeaders,
-        redirect: 'follow',
-      });
-
-      const responseHeaders = new Headers();
-      responseHeaders.set('Content-Type', remoteRes.headers.get('content-type') || 'video/mp4');
-      responseHeaders.set('Accept-Ranges', 'bytes');
-      responseHeaders.set('Cache-Control', 'public, max-age=3600');
-
-      const contentLength = remoteRes.headers.get('content-length');
-      if (contentLength) responseHeaders.set('Content-Length', contentLength);
-
-      const contentRange = remoteRes.headers.get('content-range');
-      if (contentRange) responseHeaders.set('Content-Range', contentRange);
-
-      return new NextResponse(remoteRes.body as any, {
-        status: remoteRes.status,
-        headers: responseHeaders,
-      });
-    } catch (proxyErr) {
-      console.warn('Direct stream proxy failed, redirecting to remote URL:', proxyErr);
-      return NextResponse.redirect(remoteUrl, 302);
-    }
-  } catch (error: any) {
-    console.error('Error handling video stream:', error);
-    return new NextResponse(`Streaming error: ${error.message || 'Internal error'}`, { status: 500 });
+    return new NextResponse(webStream, {
+      status: 206,
+      headers: {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize.toString(),
+        'Content-Type': mimeType,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Request-Id': reqId,
+        'X-Video-Id': videoId,
+        'X-Storage-Key': storageKey,
+      },
+    });
   }
+
+  // Full file stream
+  const fileStream = fs.createReadStream(filePath);
+  const webStream = new ReadableStream({
+    start(controller) {
+      fileStream.on('data', (chunk) => controller.enqueue(chunk));
+      fileStream.on('end', () => controller.close());
+      fileStream.on('error', (err) => controller.error(err));
+    },
+    cancel() {
+      fileStream.destroy();
+    },
+  });
+
+  return new NextResponse(webStream, {
+    status: 200,
+    headers: {
+      'Content-Length': fileSize.toString(),
+      'Content-Type': mimeType,
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'X-Request-Id': reqId,
+      'X-Video-Id': videoId,
+      'X-Storage-Key': storageKey,
+    },
+  });
 }

@@ -43,7 +43,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
 
   const handleCopyLink = (video: VideoItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/api/stream/${video.id}`;
+    const url = `${window.location.origin}/watch/${video.id}`;
     navigator.clipboard.writeText(url);
     setCopiedId(video.id);
     setTimeout(() => setCopiedId(null), 1500);

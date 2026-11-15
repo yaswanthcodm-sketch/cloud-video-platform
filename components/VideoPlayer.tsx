@@ -104,6 +104,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setShowSubMenu(false);
     setShowQualityMenu(false);
     setShowSpeedMenu(false);
+    videoEl.pause();
+    videoEl.removeAttribute('src');
+    videoEl.load();
 
     // 2. Destroy any existing HLS instance cleanly
     if (hlsRef.current) {
@@ -123,14 +126,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     // 4. Resolve exact stream URL for THIS video ID
     // Always route through /api/stream/{id} to enforce private B2 presigned signatures and HTTP 206 ranges
+    // NEVER fall back to random/demo URLs
     const targetStreamUrl = video.id
       ? `/api/stream/${video.id}${retryAttempt > 0 ? '?proxy=true' : ''}`
-      : video.playbackUrl || video.mp4FallbackUrl || '';
+      : video.playbackUrl || '';
 
     setStreamUrl(targetStreamUrl);
 
     if (!targetStreamUrl) {
-      setPlayerError('No playback stream URL available for this video record.');
+      setPlayerError(`No playback stream URL available for video "${video.title}" (ID: ${video.id}).`);
       setIsLoading(false);
       return;
     }
@@ -171,7 +175,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current = null;
       }
     };
-  }, [video.id, video.playbackUrl, video.mp4FallbackUrl, retryAttempt]);
+  }, [video.id, video.playbackUrl, retryAttempt]);
 
   // Handle external seek jumps (e.g., from transcript or card click)
   useEffect(() => {
@@ -333,30 +337,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             console.error('Video stream error on <video> element:', err);
 
             if (retryAttempt === 0 && video.id) {
-              console.log('Direct stream failed, trying backend proxy stream...');
+              console.log(`Direct stream failed for ${video.id}, retrying with backend proxy stream...`);
               setRetryAttempt(1);
               return;
             }
 
-            if (retryAttempt === 1 && video.mp4FallbackUrl && video.mp4FallbackUrl.startsWith('http')) {
-              console.log('Backend proxy failed, trying direct remote CDN fallback...');
-              setRetryAttempt(2);
-              if (videoRef.current) {
-                videoRef.current.src = video.mp4FallbackUrl;
-                videoRef.current.load();
-              }
-              return;
-            }
-
-            let msg = 'Could not load stream for this video. Please check your network or format.';
+            // Zero substitution: NEVER fall back to demo/sample videos!
+            let msg = `Could not load stream for video "${video.title}" (ID: ${video.id}).`;
             if (video.status === 'processing') {
               msg = `Video format (${video.format}) is currently being converted to browser-compatible H.264/AAC with FFmpeg. Please wait a moment and retry.`;
             } else if (err?.code === 4) {
               const isB2 = video.cloudProvider === 'aws' || video.cloudStorageLocation?.startsWith('b2://');
               if (isB2) {
-                msg = 'Backblaze B2 access denied or object missing. If this is a private bucket, please verify your B2 Key ID and Application Key in Settings.';
+                msg = `Backblaze B2 object "${video.storageKey || video.cloudStorageLocation}" could not be accessed. Please verify your B2 Key ID and Application Key in Settings.`;
               } else if (video.format && !['MP4', 'WEBM'].includes(video.format.toUpperCase())) {
                 msg = `Format ${video.format} requires transcoding into MP4 container. Automatic background FFmpeg remuxing was queued.`;
+              } else {
+                msg = `Storage file not found on server for video ID: ${video.id} (Key: ${video.storageKey || 'N/A'}). Random video substitution is permanently disabled.`;
               }
             } else if (err?.code === 2) {
               msg = 'Network connection interrupted during chunked video streaming.';
