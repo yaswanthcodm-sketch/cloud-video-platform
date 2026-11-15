@@ -300,7 +300,7 @@ export class CloudVideoService {
       fetch('/api/upload/b2/abort', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storageKey, uploadId }),
+        body: JSON.stringify({ videoId, storageKey, uploadId }),
       }).catch(() => {});
       throw uploadErr;
     }

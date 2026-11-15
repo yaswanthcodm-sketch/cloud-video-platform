@@ -23,7 +23,7 @@ export interface VideoRecord {
   format: string;
   mimeType: string;
   thumbnailUrl: string;
-  status: 'ready' | 'processing' | 'failed';
+  status: 'ready' | 'processing' | 'uploading' | 'failed' | 'error' | 'needs_reupload';
   resolutions: string[];
   cloudProvider: 'huggingface' | 'backblaze' | 'b2' | 'cloudflare' | 'aws' | 'r2' | 'local';
   cloudStorageLocation: string;

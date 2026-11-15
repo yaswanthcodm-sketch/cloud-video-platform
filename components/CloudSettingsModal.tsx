@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Cloud, Key, Server, CheckCircle2, Shield, ExternalLink, HardDrive } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Cloud, Key, Server, CheckCircle2, Shield, ExternalLink, HardDrive, RefreshCw, AlertCircle } from 'lucide-react';
 import { SupportedLang } from '../lib/i18n';
 
 interface CloudSettingsModalProps {
@@ -15,7 +15,7 @@ export const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({
   onClose,
   currentLang,
 }) => {
-  const [provider, setProvider] = useState<'huggingface' | 'backblaze' | 'cloudflare' | 'aws'>('huggingface');
+  const [provider, setProvider] = useState<'huggingface' | 'backblaze' | 'cloudflare' | 'aws'>('backblaze');
   const [hfToken, setHfToken] = useState(
     process.env.NEXT_PUBLIC_HF_TOKEN || ''
   );
@@ -25,10 +25,12 @@ export const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({
   const [hfIsPrivate, setHfIsPrivate] = useState(true);
 
   // Server 2: Backblaze B2 (10 GB Free - No Card)
-  const [b2KeyId, setB2KeyId] = useState(process.env.NEXT_PUBLIC_B2_KEY_ID || '');
-  const [b2AppKey, setB2AppKey] = useState(process.env.NEXT_PUBLIC_B2_APP_KEY || '');
-  const [b2Bucket, setB2Bucket] = useState(process.env.NEXT_PUBLIC_B2_BUCKET || 'video-vault-user');
-  const [b2Endpoint, setB2Endpoint] = useState(process.env.NEXT_PUBLIC_B2_ENDPOINT || 's3.us-east-005.backblazeb2.com');
+  const [b2KeyId, setB2KeyId] = useState('');
+  const [b2AppKey, setB2AppKey] = useState('');
+  const [b2Bucket, setB2Bucket] = useState('video-vault-user');
+  const [b2Endpoint, setB2Endpoint] = useState('s3.us-east-005.backblazeb2.com');
+  const [b2Health, setB2Health] = useState<any>(null);
+  const [isTestingB2, setIsTestingB2] = useState(false);
 
   const [cloudflareToken, setCloudflareToken] = useState('');
   const [cloudflareAccountId, setCloudflareAccountId] = useState(
@@ -40,11 +42,37 @@ export const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({
   const [awsRegion, setAwsRegion] = useState('us-east-1');
   const [isSaved, setIsSaved] = useState(false);
 
+  const fetchB2Health = async () => {
+    setIsTestingB2(true);
+    try {
+      const res = await fetch('/api/health/b2');
+      const data = await res.json();
+      setB2Health(data);
+    } catch (err: any) {
+      setB2Health({ status: 'unhealthy', error: err.message });
+    } finally {
+      setIsTestingB2(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/settings/b2')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.bucketName) setB2Bucket(data.bucketName);
+          if (data.endpoint) setB2Endpoint(data.endpoint);
+        })
+        .catch(() => {});
+      fetchB2Health();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (provider === 'backblaze' && b2KeyId && b2AppKey) {
+    if (provider === 'backblaze' && (b2KeyId || b2AppKey || b2Bucket)) {
       try {
         await fetch('/api/settings/b2', {
           method: 'POST',
@@ -57,6 +85,7 @@ export const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({
             region: 'us-east-005',
           }),
         });
+        await fetchB2Health();
       } catch (err) {
         console.error('Error saving B2 settings:', err);
       }
@@ -218,6 +247,53 @@ export const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E5EAF2] text-xs font-mono text-[#172B4D] focus:border-[#2196F3] focus:outline-none"
                   />
                 </div>
+              </div>
+
+              {/* Live B2 Health Check Diagnostic Card */}
+              <div className="p-3 rounded-xl bg-white border border-[#E5EAF2] space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#172B4D] flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-[#2196F3]" />
+                    Connection & Permissions Health
+                  </span>
+                  <button
+                    type="button"
+                    onClick={fetchB2Health}
+                    disabled={isTestingB2}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-[#2196F3] hover:underline cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isTestingB2 ? 'animate-spin' : ''}`} />
+                    <span>{isTestingB2 ? 'Testing...' : 'Test Connection'}</span>
+                  </button>
+                </div>
+
+                {b2Health && (
+                  <div className="space-y-1.5 pt-1 border-t border-[#E5EAF2]">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#718096]">B2 Authentication:</span>
+                      <span className={`font-bold ${b2Health.authSuccess ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {b2Health.authSuccess ? '✓ Verified' : '✕ Not Authenticated'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#718096]">Bucket Access ({b2Health.bucketName || 'video-vault-user'}):</span>
+                      <span className={`font-bold ${b2Health.bucketAccessible ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {b2Health.bucketAccessible ? '✓ Accessible' : '✕ Inaccessible'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#718096]">Playback URL Signing:</span>
+                      <span className={`font-bold ${b2Health.canSignUrls ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {b2Health.canSignUrls ? '✓ Active' : '✕ Disabled'}
+                      </span>
+                    </div>
+                    {b2Health.error && (
+                      <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[10px]">
+                        {b2Health.error}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

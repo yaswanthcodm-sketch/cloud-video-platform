@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getB2Config, isB2Configured, initB2MultipartUpload } from '@/lib/b2Client';
 import { verifyAdminRequest } from '@/lib/auth';
+import { VideoDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,35 @@ export async function POST(req: NextRequest) {
         category: category || 'General',
       }
     );
+
+    // Create record with intermediate status 'uploading'
+    const ext = fileName.split('.').pop()?.toUpperCase() || 'MP4';
+    VideoDb.create({
+      id: videoId,
+      title: title || fileName.replace(/\.[^/.]+$/, ''),
+      description: 'Uploading to Backblaze B2 Cloud Storage...',
+      originalFileName: fileName,
+      storageKey,
+      playbackUrl: `/api/stream/${videoId}`,
+      fileSizeBytes: fileSizeBytes || 0,
+      fileSizeDisplay: VideoDb.formatBytes(fileSizeBytes || 0),
+      durationSeconds: 0,
+      durationDisplay: '--:--',
+      format: ext,
+      mimeType: contentType || `video/${ext.toLowerCase() === 'mkv' ? 'x-matroska' : ext.toLowerCase()}`,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1200&auto=format&fit=crop',
+      status: 'uploading',
+      resolutions: ['1080p FHD', '720p HD', '480p'],
+      cloudProvider: 'aws',
+      cloudStorageLocation: `b2://${cfg.bucketName}/${storageKey}`,
+      b2BucketName: cfg.bucketName,
+      category: category || 'General',
+      ownerId: 'user-yaswanth',
+      audioTracks: [
+        { id: `aud-${Date.now()}-en`, languageCode: 'en', label: 'English (Original)', isDefault: true, codec: 'AAC' }
+      ],
+      subtitleTracks: [],
+    });
 
     return NextResponse.json({
       success: true,

@@ -70,6 +70,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     databaseRecordExists?: boolean;
     b2ObjectFound?: boolean;
     uploadStatus?: string;
+    b2Configured?: boolean;
     message?: string;
   } | null>(null);
 
@@ -363,6 +364,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               databaseRecordExists: true,
               b2ObjectFound: false,
               uploadStatus: video.status || 'unknown',
+              b2Configured: false,
               message: `The storage object "${video.storageKey}" could not be loaded from cloud bucket "${fallbackBucket}".`,
             });
 
@@ -379,6 +381,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       databaseRecordExists: data.databaseRecordExists ?? true,
                       b2ObjectFound: data.b2ObjectFound ?? false,
                       uploadStatus: data.uploadStatus || video.status || 'unknown',
+                      b2Configured: data.b2Configured ?? false,
                       message: data.message || defaultMsg,
                     });
                   }
@@ -432,12 +435,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   <span className="font-bold text-[#16A34A]">{detailedError.databaseRecordExists ? 'Exists' : 'Not found'}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">B2 Credentials:</span>
+                  <span className={`font-bold ${detailedError.b2Configured ? 'text-[#16A34A]' : 'text-amber-400'}`}>
+                    {detailedError.b2Configured ? 'Configured' : 'Not configured'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
                   <span className="text-slate-400">B2 Object Found:</span>
                   <span className="font-bold text-rose-400">{detailedError.b2ObjectFound ? 'Yes' : 'Not found in bucket'}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-300">
                   <span className="text-slate-400">Upload Status:</span>
-                  <span className="font-bold text-white">{detailedError.uploadStatus}</span>
+                  <span className={`font-bold ${detailedError.uploadStatus === 'needs_reupload' ? 'text-amber-400' : 'text-white'}`}>
+                    {detailedError.uploadStatus === 'needs_reupload' ? 'Needs Cloud Upload' : detailedError.uploadStatus}
+                  </span>
                 </div>
               </div>
             )}

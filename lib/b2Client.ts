@@ -7,6 +7,7 @@ import {
   HeadObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'fs';
@@ -247,5 +248,104 @@ export async function abortB2MultipartUpload(
     return await client.send(command);
   } catch (err) {
     console.warn('Failed to abort multipart upload in B2:', err);
+  }
+}
+
+export interface B2HealthResult {
+  status: 'healthy' | 'unhealthy' | 'unconfigured';
+  configured: boolean;
+  authSuccess: boolean;
+  bucketAccessible: boolean;
+  bucketName: string;
+  endpoint: string;
+  region: string;
+  canListObjects: boolean;
+  canSignUrls: boolean;
+  sampleKeyTested?: string;
+  sampleSignedUrlGenerated: boolean;
+  error?: string;
+}
+
+/**
+ * Backend health check verifying Backblaze B2 authentication, bucket access,
+ * object listing, and presigned playback URL generation without exposing secrets.
+ */
+export async function checkB2Health(): Promise<B2HealthResult> {
+  const cfg = getB2Config();
+  if (!isB2Configured()) {
+    return {
+      status: 'unconfigured',
+      configured: false,
+      authSuccess: false,
+      bucketAccessible: false,
+      bucketName: cfg.bucketName || 'video-vault-user',
+      endpoint: cfg.endpoint,
+      region: cfg.region,
+      canListObjects: false,
+      canSignUrls: false,
+      sampleSignedUrlGenerated: false,
+      error: 'B2_KEY_ID or B2_APPLICATION_KEY not configured on server',
+    };
+  }
+
+  try {
+    const client = getS3Client();
+    // 1. Test B2 authentication and bucket access via ListObjectsV2
+    const listCmd = new ListObjectsV2Command({
+      Bucket: cfg.bucketName,
+      MaxKeys: 5,
+    });
+    const listRes = await client.send(listCmd);
+    const objects = listRes.Contents || [];
+    const sampleKey = objects.length > 0 && objects[0].Key ? objects[0].Key : `health-check/probe_${Date.now()}.mp4`;
+
+    // 2. Test presigned URL generation for playback
+    let canSignUrls = false;
+    let signedUrlGen = false;
+    try {
+      const getCmd = new GetObjectCommand({
+        Bucket: cfg.bucketName,
+        Key: sampleKey,
+      });
+      const url = await getSignedUrl(client, getCmd, { expiresIn: 300 });
+      if (url && url.startsWith('http')) {
+        canSignUrls = true;
+        signedUrlGen = true;
+      }
+    } catch (signErr) {
+      console.warn('Health check: failed to generate signed URL:', signErr);
+    }
+
+    return {
+      status: 'healthy',
+      configured: true,
+      authSuccess: true,
+      bucketAccessible: true,
+      bucketName: cfg.bucketName,
+      endpoint: cfg.endpoint,
+      region: cfg.region,
+      canListObjects: true,
+      canSignUrls,
+      sampleKeyTested: sampleKey,
+      sampleSignedUrlGenerated: signedUrlGen,
+    };
+  } catch (err: any) {
+    let cleanMsg = err.message || 'Backblaze B2 connection failed';
+    if (cfg.applicationKey) cleanMsg = cleanMsg.replaceAll(cfg.applicationKey, '***');
+    if (cfg.keyId) cleanMsg = cleanMsg.replaceAll(cfg.keyId, '***');
+
+    return {
+      status: 'unhealthy',
+      configured: true,
+      authSuccess: false,
+      bucketAccessible: false,
+      bucketName: cfg.bucketName,
+      endpoint: cfg.endpoint,
+      region: cfg.region,
+      canListObjects: false,
+      canSignUrls: false,
+      sampleSignedUrlGenerated: false,
+      error: cleanMsg,
+    };
   }
 }

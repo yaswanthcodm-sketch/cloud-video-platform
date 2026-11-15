@@ -123,6 +123,26 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
                   <span className="px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-mono text-[#16A34A] font-bold">
                     {item.fileSizeDisplay || item.originalSizeDisplay}
                   </span>
+                  {item.status === 'needs_reupload' && (
+                    <span className="px-2 py-0.5 rounded-lg bg-amber-500/90 text-white text-[10px] font-bold backdrop-blur-md">
+                      Needs Cloud Upload
+                    </span>
+                  )}
+                  {item.status === 'uploading' && (
+                    <span className="px-2 py-0.5 rounded-lg bg-blue-500/90 text-white text-[10px] font-bold backdrop-blur-md animate-pulse">
+                      Uploading...
+                    </span>
+                  )}
+                  {item.status === 'failed' && (
+                    <span className="px-2 py-0.5 rounded-lg bg-rose-600/90 text-white text-[10px] font-bold backdrop-blur-md">
+                      Upload Failed
+                    </span>
+                  )}
+                  {item.status === 'processing' && (
+                    <span className="px-2 py-0.5 rounded-lg bg-indigo-500/90 text-white text-[10px] font-bold backdrop-blur-md animate-pulse">
+                      Processing...
+                    </span>
+                  )}
                 </div>
 
                 {/* Quick Hover Delete Action (Admin Only) */}

@@ -46,7 +46,7 @@ export interface VideoItem {
   durationSeconds: number;
   durationDisplay: string;
   thumbnailUrl: string;
-  status: 'ready' | 'processing' | 'uploading' | 'failed' | 'error';
+  status: 'ready' | 'processing' | 'uploading' | 'failed' | 'error' | 'needs_reupload';
   resolutions: string[];
   cloudProvider: 'huggingface' | 'backblaze' | 'b2' | 'cloudflare' | 'aws' | 'r2' | 'local';
   cloudStorageLocation: string;
