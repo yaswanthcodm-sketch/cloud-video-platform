@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { VideoDb } from '@/lib/db';
-import { getB2Config, isB2Configured, getB2DownloadSignedUrl, getB2ObjectStream } from '@/lib/b2Client';
+import { getB2Config, isB2Configured, getB2DownloadSignedUrl, getB2ObjectStream, getB2ObjectMetadata } from '@/lib/b2Client';
 import { VideoTranscoder } from '@/lib/videoTranscoder';
 
 export const dynamic = 'force-dynamic';
@@ -25,14 +25,20 @@ export async function GET(
 
     // 1. Establish single source of truth: lookup exact video by unique database ID
     const video = VideoDb.getById(id);
+    const cfg = getB2Config();
 
     if (!video) {
       console.warn(`[StreamAPI] [${reqId}] 404: Video not found in database for ID: "${id}"`);
       return NextResponse.json(
         {
           error: 'Video not found',
-          message: `No video record exists with ID: "${id}"`,
-          id,
+          videoId: id,
+          configuredBucketName: cfg.bucketName || 'video-vault-user',
+          expectedObjectKey: null,
+          databaseRecordExists: false,
+          b2ObjectFound: false,
+          uploadStatus: 'not_found',
+          message: `No video record exists in the database with ID: "${id}"`,
           requestId: reqId,
         },
         {
@@ -40,13 +46,23 @@ export async function GET(
           headers: {
             'X-Request-Id': reqId,
             'X-Video-Id': id,
+            'X-DB-Record-Exists': 'false',
           },
         }
       );
     }
 
+    // Resolve exact bucket name from record or config
+    let bucketName = video.b2BucketName || cfg.bucketName || 'video-vault-user';
+    if (video.cloudStorageLocation?.startsWith('b2://')) {
+      const match = video.cloudStorageLocation.match(/^b2:\/\/([^/]+)\//);
+      if (match && match[1]) {
+        bucketName = match[1];
+      }
+    }
+
     console.log(
-      `[StreamAPI] [${reqId}] Match: "${video.title}" (ID: ${video.id}) | Key: "${video.storageKey}" | Provider: "${video.cloudProvider}"`
+      `[StreamAPI] [${reqId}] Match: "${video.title}" (ID: ${video.id}) | Key: "${video.storageKey}" | Provider: "${video.cloudProvider}" | Bucket: "${bucketName}"`
     );
 
     // 2. Storage Strategy A: Deployed Static Samples (e.g. Video A Red Car / Video B Blue Car)
@@ -65,74 +81,79 @@ export async function GET(
       }
     }
 
-    // 3. Storage Strategy B: Backblaze B2 Cloud Storage
+    // 3. Storage Strategy B: Backblaze B2 Cloud Storage (Direct S3-Compatible Storage)
     const isB2Video =
       video.cloudProvider === 'aws' ||
+      video.cloudProvider === 'backblaze' ||
+      video.cloudProvider === 'b2' ||
       video.cloudStorageLocation?.startsWith('b2://') ||
       video.storageKey?.startsWith('videos/');
 
     if (isB2Video && isB2Configured()) {
-      const cfg = getB2Config();
-      console.log(`[StreamAPI] [${reqId}] Routing to Backblaze B2 (Bucket: ${cfg.bucketName}, Key: ${video.storageKey})`);
+      console.log(`[StreamAPI] [${reqId}] Checking Backblaze B2 object (Bucket: ${bucketName}, Key: ${video.storageKey})`);
 
-      // Option A: Direct stream proxy through backend with HTTP 206 Range
-      if (proxyMode && rangeHeader) {
-        try {
-          const b2Response = await getB2ObjectStream(cfg.bucketName, video.storageKey, rangeHeader);
-          const bodyStream = b2Response.Body as any;
-          const contentLength = b2Response.ContentLength?.toString() || '0';
-          const contentRange = b2Response.ContentRange || '';
-          const contentType = b2Response.ContentType || video.mimeType || 'video/mp4';
-
-          const webStream = new ReadableStream({
-            start(controller) {
-              bodyStream.on('data', (chunk: any) => controller.enqueue(chunk));
-              bodyStream.on('end', () => controller.close());
-              bodyStream.on('error', (err: any) => controller.error(err));
-            },
-            cancel() {
-              if (bodyStream.destroy) bodyStream.destroy();
-            },
-          });
-
-          return new NextResponse(webStream, {
-            status: 206,
-            headers: {
-              'Content-Range': contentRange,
-              'Accept-Ranges': 'bytes',
-              'Content-Length': contentLength,
-              'Content-Type': contentType,
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'X-Request-Id': reqId,
-              'X-Video-Id': video.id,
-              'X-Storage-Key': video.storageKey,
-            },
-          });
-        } catch (b2ProxyErr: any) {
-          console.warn(`[StreamAPI] [${reqId}] B2 direct stream proxy failed:`, b2ProxyErr.message);
+      // Verify whether the actual object exists in the configured B2 bucket
+      let b2ObjectExists = false;
+      try {
+        const metadata = await getB2ObjectMetadata(bucketName, video.storageKey);
+        if (metadata) {
+          b2ObjectExists = true;
+          console.log(`[StreamAPI] [${reqId}] Verified B2 object exists: ${video.storageKey} (${metadata.ContentLength} bytes)`);
         }
+      } catch (headErr: any) {
+        console.warn(`[StreamAPI] [${reqId}] B2 HeadObject check failed for key "${video.storageKey}" in bucket "${bucketName}":`, headErr.name || headErr.message);
+        b2ObjectExists = false;
       }
 
-      // Option B: Presigned 6-hour direct GET URL for Backblaze B2 S3 storage
-      try {
-        const signedUrl = await getB2DownloadSignedUrl(cfg.bucketName, video.storageKey, 21600);
-        console.log(`[StreamAPI] [${reqId}] Generated B2 presigned download URL for key: ${video.storageKey}`);
-        return NextResponse.redirect(signedUrl, 307);
-      } catch (signErr: any) {
-        console.error(`[StreamAPI] [${reqId}] Failed to authorize B2 object:`, signErr.message);
-        return NextResponse.json(
-          {
-            error: 'Backblaze B2 Authorization Error',
-            message: signErr.message,
-            storageKey: video.storageKey,
-            bucket: cfg.bucketName,
-            requestId: reqId,
-          },
-          {
-            status: 403,
-            headers: { 'X-Request-Id': reqId, 'X-Video-Id': video.id },
+      if (b2ObjectExists) {
+        // Option A: Direct stream proxy through backend with HTTP 206 Range
+        if (proxyMode && rangeHeader) {
+          try {
+            const b2Response = await getB2ObjectStream(bucketName, video.storageKey, rangeHeader);
+            const bodyStream = b2Response.Body as any;
+            const contentLength = b2Response.ContentLength?.toString() || '0';
+            const contentRange = b2Response.ContentRange || '';
+            const contentType = b2Response.ContentType || video.mimeType || 'video/mp4';
+
+            const webStream = new ReadableStream({
+              start(controller) {
+                bodyStream.on('data', (chunk: any) => controller.enqueue(chunk));
+                bodyStream.on('end', () => controller.close());
+                bodyStream.on('error', (err: any) => controller.error(err));
+              },
+              cancel() {
+                if (bodyStream.destroy) bodyStream.destroy();
+              },
+            });
+
+            return new NextResponse(webStream, {
+              status: 206,
+              headers: {
+                'Content-Range': contentRange,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': contentLength,
+                'Content-Type': contentType,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'X-Request-Id': reqId,
+                'X-Video-Id': video.id,
+                'X-Storage-Key': video.storageKey,
+                'X-B2-Bucket': bucketName,
+                'X-B2-Found': 'true',
+              },
+            });
+          } catch (b2ProxyErr: any) {
+            console.warn(`[StreamAPI] [${reqId}] B2 direct stream proxy failed:`, b2ProxyErr.message);
           }
-        );
+        }
+
+        // Option B: Presigned 6-hour direct GET URL for Backblaze B2 S3 storage
+        try {
+          const signedUrl = await getB2DownloadSignedUrl(bucketName, video.storageKey, 21600);
+          console.log(`[StreamAPI] [${reqId}] Generated B2 presigned download URL for key: ${video.storageKey}`);
+          return NextResponse.redirect(signedUrl, 307);
+        } catch (signErr: any) {
+          console.error(`[StreamAPI] [${reqId}] Failed to authorize B2 object:`, signErr.message);
+        }
       }
     }
 
@@ -203,22 +224,27 @@ export async function GET(
       }
     }
 
-    // 6. STRICT ERROR: NO SILENT SUBSTITUTION!
-    // If the storage object for THIS exact video is not found, return explicit 404
+    // 6. STRICT ERROR REPORTING (PRIORITY 4): NO SILENT SUBSTITUTION!
     console.error(
-      `[StreamAPI] [${reqId}] 404 Storage object not found for video: "${video.title}" (Key: ${video.storageKey})`
+      `[StreamAPI] [${reqId}] 404 Storage object not found for video: "${video.title}" (Key: ${video.storageKey}, Bucket: ${bucketName})`
     );
+
+    const errorMessage = isB2Configured()
+      ? `Object "${video.storageKey}" was not found in Backblaze B2 bucket "${bucketName}".`
+      : 'Backblaze B2 credentials (B2_KEY_ID / B2_APPLICATION_KEY) are not configured on this server, and the video file does not exist locally.';
 
     return NextResponse.json(
       {
-        error: 'Video file not found in cloud storage',
-        id: video.id,
+        error: 'Storage file not found in cloud storage',
+        videoId: video.id,
         title: video.title,
-        storageKey: video.storageKey,
-        cloudProvider: video.cloudProvider,
-        message: isB2Configured()
-          ? `The object "${video.storageKey}" was not found in your Backblaze B2 bucket.`
-          : 'Backblaze B2 is not configured on this server, and the video file does not exist locally.',
+        configuredBucketName: bucketName,
+        expectedObjectKey: video.storageKey,
+        databaseRecordExists: true,
+        b2ObjectFound: false,
+        uploadStatus: video.status || 'unknown',
+        b2Configured: isB2Configured(),
+        message: errorMessage,
         requestId: reqId,
       },
       {
@@ -227,6 +253,10 @@ export async function GET(
           'X-Request-Id': reqId,
           'X-Video-Id': video.id,
           'X-Storage-Key': video.storageKey,
+          'X-B2-Bucket': bucketName,
+          'X-B2-Found': 'false',
+          'X-DB-Record-Exists': 'true',
+          'X-Upload-Status': video.status || 'unknown',
         },
       }
     );

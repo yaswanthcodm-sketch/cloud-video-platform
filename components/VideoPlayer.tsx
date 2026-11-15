@@ -63,6 +63,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [bufferedPercent, setBufferedPercent] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
+  const [detailedError, setDetailedError] = useState<{
+    videoId: string;
+    configuredBucketName?: string;
+    expectedObjectKey?: string;
+    databaseRecordExists?: boolean;
+    b2ObjectFound?: boolean;
+    uploadStatus?: string;
+    message?: string;
+  } | null>(null);
 
   // Audio Dubs
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>(video.audioTracks || []);
@@ -97,6 +106,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // 1. Clear previous player state completely
     setIsLoading(true);
     setPlayerError(null);
+    setDetailedError(null);
     setCurrentTime(0);
     setIsPlaying(false);
     setActiveSubtitleText('');
@@ -342,24 +352,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               return;
             }
 
-            // Zero substitution: NEVER fall back to demo/sample videos!
-            let msg = `Could not load stream for video "${video.title}" (ID: ${video.id}).`;
-            if (video.status === 'processing') {
-              msg = `Video format (${video.format}) is currently being converted to browser-compatible H.264/AAC with FFmpeg. Please wait a moment and retry.`;
-            } else if (err?.code === 4) {
-              const isB2 = video.cloudProvider === 'aws' || video.cloudStorageLocation?.startsWith('b2://');
-              if (isB2) {
-                msg = `Backblaze B2 object "${video.storageKey || video.cloudStorageLocation}" could not be accessed. Please verify your B2 Key ID and Application Key in Settings.`;
-              } else if (video.format && !['MP4', 'WEBM'].includes(video.format.toUpperCase())) {
-                msg = `Format ${video.format} requires transcoding into MP4 container. Automatic background FFmpeg remuxing was queued.`;
-              } else {
-                msg = `Storage file not found on server for video ID: ${video.id} (Key: ${video.storageKey || 'N/A'}). Random video substitution is permanently disabled.`;
-              }
-            } else if (err?.code === 2) {
-              msg = 'Network connection interrupted during chunked video streaming.';
+            // Zero substitution: Query backend diagnostic API for exact error parameters
+            const fallbackBucket = video.b2BucketName || 'video-vault-user';
+            const defaultMsg = `Storage file not found on server for video ID: ${video.id}`;
+
+            setDetailedError({
+              videoId: video.id,
+              configuredBucketName: fallbackBucket,
+              expectedObjectKey: video.storageKey || 'N/A',
+              databaseRecordExists: true,
+              b2ObjectFound: false,
+              uploadStatus: video.status || 'unknown',
+              message: `The storage object "${video.storageKey}" could not be loaded from cloud bucket "${fallbackBucket}".`,
+            });
+
+            // Fetch exact diagnostic status from backend stream route
+            if (video.id) {
+              fetch(`/api/stream/${video.id}`)
+                .then(async (res) => {
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    setDetailedError({
+                      videoId: data.videoId || video.id,
+                      configuredBucketName: data.configuredBucketName || fallbackBucket,
+                      expectedObjectKey: data.expectedObjectKey || video.storageKey || 'N/A',
+                      databaseRecordExists: data.databaseRecordExists ?? true,
+                      b2ObjectFound: data.b2ObjectFound ?? false,
+                      uploadStatus: data.uploadStatus || video.status || 'unknown',
+                      message: data.message || defaultMsg,
+                    });
+                  }
+                })
+                .catch(() => {});
             }
 
-            setPlayerError(msg);
+            setPlayerError(defaultMsg);
           }}
           playsInline
         />
@@ -378,15 +405,49 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         {/* Error Overlay with Action Button */}
         {playerError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 text-white p-6 text-center space-y-3 z-30">
-            <AlertCircle className="w-12 h-12 text-[#DC2626]" />
-            <h3 className="font-bold text-sm">Streaming Notice</h3>
-            <p className="text-xs text-slate-300 max-w-md leading-relaxed">{playerError}</p>
-            <div className="flex items-center gap-2 pt-2">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-6 text-center space-y-3.5 z-30 overflow-y-auto">
+            <AlertCircle className="w-10 h-10 text-[#DC2626] shrink-0" />
+            <h3 className="font-bold text-sm">Streaming Notice: Storage File Not Found</h3>
+            <p className="text-xs text-slate-300 max-w-md leading-relaxed">
+              {detailedError?.message || playerError}
+            </p>
+
+            {/* Structured Error Reporting (Section 4) */}
+            {detailedError && (
+              <div className="w-full max-w-md bg-white/10 backdrop-blur-md rounded-2xl p-4 text-left space-y-2 border border-white/15 text-[11px] font-mono shadow-2xl">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">Video ID:</span>
+                  <span className="font-bold text-white truncate max-w-[210px]">{detailedError.videoId}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">Configured Bucket:</span>
+                  <span className="font-bold text-[#2196F3]">{detailedError.configuredBucketName || 'video-vault-user'}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">Expected Object Key:</span>
+                  <span className="font-bold text-amber-300 truncate max-w-[210px]">{detailedError.expectedObjectKey}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">Database Record:</span>
+                  <span className="font-bold text-[#16A34A]">{detailedError.databaseRecordExists ? 'Exists' : 'Not found'}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">B2 Object Found:</span>
+                  <span className="font-bold text-rose-400">{detailedError.b2ObjectFound ? 'Yes' : 'Not found in bucket'}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400">Upload Status:</span>
+                  <span className="font-bold text-white">{detailedError.uploadStatus}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => {
                   setPlayerError(null);
+                  setDetailedError(null);
                   setIsLoading(true);
                   setRetryAttempt((prev) => prev + 1);
                 }}

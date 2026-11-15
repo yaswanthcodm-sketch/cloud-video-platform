@@ -48,8 +48,9 @@ export interface VideoItem {
   thumbnailUrl: string;
   status: 'ready' | 'processing' | 'uploading' | 'failed' | 'error';
   resolutions: string[];
-  cloudProvider: 'huggingface' | 'backblaze' | 'cloudflare' | 'aws' | 'r2' | 'local';
+  cloudProvider: 'huggingface' | 'backblaze' | 'b2' | 'cloudflare' | 'aws' | 'r2' | 'local';
   cloudStorageLocation: string;
+  b2BucketName?: string;
   createdAt: string;
   updatedAt?: string;
   lastWatchedAt?: string;

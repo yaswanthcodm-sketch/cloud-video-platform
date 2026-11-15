@@ -25,8 +25,9 @@ export interface VideoRecord {
   thumbnailUrl: string;
   status: 'ready' | 'processing' | 'failed';
   resolutions: string[];
-  cloudProvider: 'huggingface' | 'cloudflare' | 'aws' | 'local';
+  cloudProvider: 'huggingface' | 'backblaze' | 'b2' | 'cloudflare' | 'aws' | 'r2' | 'local';
   cloudStorageLocation: string;
+  b2BucketName?: string;
   createdAt: string;
   updatedAt: string;
   lastWatchedAt?: string;

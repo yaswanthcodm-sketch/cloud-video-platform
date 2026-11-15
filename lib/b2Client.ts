@@ -9,6 +9,8 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import fs from 'fs';
+import path from 'path';
 
 export interface B2Config {
   keyId: string;
@@ -18,13 +20,52 @@ export interface B2Config {
   region: string;
 }
 
+let runtimeConfig: Partial<B2Config> | null = null;
+
+function loadStoredConfig(): Partial<B2Config> {
+  if (runtimeConfig) return runtimeConfig;
+  const paths = [
+    path.join(process.cwd(), 'data', 'b2_config.json'),
+    '/tmp/b2_config.json',
+  ];
+  for (const p of paths) {
+    try {
+      if (fs.existsSync(p)) {
+        const raw = fs.readFileSync(p, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          runtimeConfig = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return {};
+}
+
+export function saveStoredConfig(cfg: Partial<B2Config>) {
+  runtimeConfig = { ...(runtimeConfig || {}), ...cfg };
+  const paths = [
+    path.join(process.cwd(), 'data', 'b2_config.json'),
+    '/tmp/b2_config.json',
+  ];
+  for (const p of paths) {
+    try {
+      const dir = path.dirname(p);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(p, JSON.stringify(runtimeConfig, null, 2), 'utf8');
+    } catch {}
+  }
+}
+
 export function getB2Config(): B2Config {
+  const stored = loadStoredConfig();
   return {
-    keyId: process.env.B2_KEY_ID || process.env.B2_APPLICATION_KEY_ID || '',
-    applicationKey: process.env.B2_APPLICATION_KEY || '',
-    bucketName: process.env.B2_BUCKET_NAME || 'video-vault-user',
-    endpoint: process.env.B2_ENDPOINT || 's3.us-east-005.backblazeb2.com',
-    region: process.env.B2_REGION || 'us-east-005',
+    keyId: process.env.B2_KEY_ID || process.env.B2_APPLICATION_KEY_ID || stored.keyId || '',
+    applicationKey: process.env.B2_APPLICATION_KEY || stored.applicationKey || '',
+    bucketName: process.env.B2_BUCKET_NAME || stored.bucketName || 'video-vault-user',
+    endpoint: process.env.B2_ENDPOINT || stored.endpoint || 's3.us-east-005.backblazeb2.com',
+    region: process.env.B2_REGION || stored.region || 'us-east-005',
   };
 }
 

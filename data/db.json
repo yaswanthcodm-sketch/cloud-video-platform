@@ -155,8 +155,8 @@
       "720p HD",
       "480p"
     ],
-    "cloudProvider": "huggingface",
-    "cloudStorageLocation": "hf://datasets/Yaswanth11ui/video-vault/Never.Ending.Summer.S01E03._DRAMAKEY.COM_.mkv",
+    "cloudProvider": "aws",
+    "cloudStorageLocation": "b2://video-vault-user/videos/vid_1794660285563_sx3r3co/Never.Ending.Summer.S01E03._DRAMAKEY.COM_.mkv",
     "category": "General",
     "ownerId": "user-yaswanth",
     "audioTracks": [
@@ -178,7 +178,8 @@
     ],
     "views": 0,
     "createdAt": "2026-11-14T12:44:48.518Z",
-    "updatedAt": "2026-11-14T12:44:48.518Z"
+    "updatedAt": "2026-11-14T12:44:48.518Z",
+    "b2BucketName": "video-vault-user"
   },
   {
     "id": "vid_1794660181791_qqeqxph",

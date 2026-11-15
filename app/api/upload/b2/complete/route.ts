@@ -62,7 +62,6 @@ export async function POST(req: NextRequest) {
       originalFileName: fileName,
       storageKey,
       playbackUrl: `/api/stream/${videoId}`,
-      mp4FallbackUrl: `/api/stream/${videoId}?format=mp4`,
       fileSizeBytes: totalSizeBytes || 0,
       fileSizeDisplay: VideoDb.formatBytes(totalSizeBytes || 0),
       durationSeconds: 180,
@@ -74,6 +73,7 @@ export async function POST(req: NextRequest) {
       resolutions: ['1080p FHD', '720p HD', '480p'],
       cloudProvider: 'aws', // B2 uses S3 standard
       cloudStorageLocation: `b2://${cfg.bucketName}/${storageKey}`,
+      b2BucketName: cfg.bucketName,
       category: category || 'General',
       ownerId: 'user-yaswanth',
       audioTracks: audioTracks && audioTracks.length > 0 ? audioTracks : [
