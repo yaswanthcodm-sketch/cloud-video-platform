@@ -28,12 +28,14 @@ interface CloudUploaderProps {
   isOpen: boolean;
   onClose: () => void;
   onVideoCreated: (video: VideoItem) => void;
+  reuploadVideo?: VideoItem | null;
 }
 
 export const CloudUploader: React.FC<CloudUploaderProps> = ({
   isOpen,
   onClose,
   onVideoCreated,
+  reuploadVideo,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -83,6 +85,18 @@ export const CloudUploader: React.FC<CloudUploaderProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (reuploadVideo) {
+        setTitle(reuploadVideo.title || '');
+        setDescription(reuploadVideo.description || '');
+        setCategory(reuploadVideo.category || 'General');
+        if (reuploadVideo.audioTracks && reuploadVideo.audioTracks.length > 0) {
+          setAudioTracks(reuploadVideo.audioTracks);
+        }
+        if (reuploadVideo.subtitleTracks && reuploadVideo.subtitleTracks.length > 0) {
+          setSubtitleTracks(reuploadVideo.subtitleTracks);
+        }
+      }
+
       CloudVideoService.checkB2Status().then((status) => {
         setB2Configured(status.configured);
         if (status.bucketName) setB2BucketName(status.bucketName);
@@ -93,7 +107,7 @@ export const CloudUploader: React.FC<CloudUploaderProps> = ({
         }
       });
     }
-  }, [isOpen]);
+  }, [isOpen, reuploadVideo]);
 
   if (!isOpen) return null;
 
@@ -222,7 +236,8 @@ export const CloudUploader: React.FC<CloudUploaderProps> = ({
           onProgress,
           onComplete,
           isPausedRef,
-          isCancelledRef
+          isCancelledRef,
+          reuploadVideo?.id
         );
       } else {
         // High-Reliability Chunked Stream Engine
@@ -272,13 +287,15 @@ export const CloudUploader: React.FC<CloudUploaderProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-[#172B4D] flex items-center gap-2">
-                Upload Video to Cloud Vault
+                {reuploadVideo ? 'Re-upload Video to Cloud Storage' : 'Upload Video to Cloud Vault'}
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAF4FF] text-[#2196F3] border border-[#2196F3]/30">
-                  Up to 7.5 GB
+                  {reuploadVideo ? `ID: ${reuploadVideo.id}` : 'Up to 7.5 GB'}
                 </span>
               </h2>
               <p className="text-xs text-[#718096]">
-                Direct-to-cloud streaming architecture • 0 bytes stored in server RAM
+                {reuploadVideo
+                  ? `Replaces missing cloud object while preserving database ID, Telugu audio & subtitles`
+                  : `Direct-to-cloud streaming architecture • 0 bytes stored in server RAM`}
               </p>
             </div>
           </div>

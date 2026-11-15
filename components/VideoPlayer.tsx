@@ -23,6 +23,7 @@ import {
   Loader2,
   Share2,
   Trash2,
+  UploadCloud,
 } from 'lucide-react';
 import { VideoItem, AudioTrack, SubtitleTrack } from '../lib/types';
 
@@ -34,6 +35,7 @@ interface VideoPlayerProps {
   seekToTime?: number | null;
   onSeekHandled?: () => void;
   onDeleteVideo?: (id: string) => void;
+  onReuploadVideo?: (video: VideoItem) => void;
   isAdmin?: boolean;
 }
 
@@ -45,6 +47,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   seekToTime,
   onSeekHandled,
   onDeleteVideo,
+  onReuploadVideo,
   isAdmin = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -466,6 +469,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               >
                 Retry Stream
               </button>
+              {onReuploadVideo && (
+                <button
+                  type="button"
+                  onClick={() => onReuploadVideo(video)}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-xs font-bold text-white transition-colors flex items-center gap-1.5"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Re-upload to Cloud (B2)</span>
+                </button>
+              )}
             </div>
           </div>
         )}

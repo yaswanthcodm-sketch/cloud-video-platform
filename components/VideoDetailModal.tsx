@@ -14,6 +14,7 @@ import {
   Code,
   Calendar,
   Trash2,
+  UploadCloud,
 } from 'lucide-react';
 import { VideoItem } from '../lib/types';
 
@@ -22,6 +23,7 @@ interface VideoDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDeleteVideo?: (id: string) => void;
+  onReuploadVideo?: (video: VideoItem) => void;
   isAdmin?: boolean;
 }
 
@@ -30,6 +32,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
   isOpen,
   onClose,
   onDeleteVideo,
+  onReuploadVideo,
   isAdmin = false,
 }) => {
   const [copiedStream, setCopiedStream] = useState(false);
@@ -205,10 +208,23 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Footer with Delete Action (Admin Only) */}
-          {isAdmin && onDeleteVideo && (
-            <div className="pt-4 border-t border-[#E5EAF2] flex items-center justify-between">
-              <span className="text-[11px] text-[#718096]">Permanently remove from cloud library</span>
+          {/* Actions Bar */}
+          <div className="pt-4 border-t border-[#E5EAF2] flex items-center justify-between gap-3">
+            {onReuploadVideo ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onReuploadVideo(video);
+                  onClose();
+                }}
+                className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Re-upload to Cloud (B2)</span>
+              </button>
+            ) : <div />}
+
+            {isAdmin && onDeleteVideo && (
               <button
                 type="button"
                 onClick={() => {
@@ -222,8 +238,8 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete Video</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
         </div>
 

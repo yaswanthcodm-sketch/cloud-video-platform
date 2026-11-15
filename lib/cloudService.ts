@@ -130,7 +130,8 @@ export class CloudVideoService {
     onProgress: (state: UploadProgress) => void,
     onComplete: (video: VideoItem) => void,
     isPausedRef: { current: boolean },
-    isCancelledRef: { current: boolean }
+    isCancelledRef: { current: boolean },
+    existingVideoId?: string
   ) {
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB parts for optimal B2 S3 throughput
     const totalBytes = file.size;
@@ -160,6 +161,7 @@ export class CloudVideoService {
         contentType: file.type || 'video/mp4',
         title,
         category,
+        videoId: existingVideoId,
       }),
     });
 

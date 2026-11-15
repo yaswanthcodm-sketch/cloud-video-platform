@@ -14,6 +14,7 @@ import {
   Check,
   Film,
   ExternalLink,
+  UploadCloud,
 } from 'lucide-react';
 import { VideoItem } from '../lib/types';
 
@@ -23,6 +24,7 @@ interface VideoGridProps {
   onSelectVideo: (video: VideoItem) => void;
   onDeleteVideo: (id: string) => void;
   onViewDetails?: (video: VideoItem) => void;
+  onReuploadVideo?: (video: VideoItem) => void;
   sortBy: string;
   onSortChange: (sort: string) => void;
   isAdmin?: boolean;
@@ -34,6 +36,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   onSelectVideo,
   onDeleteVideo,
   onViewDetails,
+  onReuploadVideo,
   sortBy,
   onSortChange,
   isAdmin = false,
@@ -233,6 +236,20 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
                           >
                             <ExternalLink className="w-3.5 h-3.5 text-[#718096]" />
                             <span>View Details</span>
+                          </button>
+                        )}
+
+                        {onReuploadVideo && (item.status === 'needs_reupload' || item.status === 'failed' || isAdmin) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onReuploadVideo(item);
+                              setActiveMenuId(null);
+                            }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-amber-50 text-amber-700 flex items-center gap-2 font-medium"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Re-upload to Cloud</span>
                           </button>
                         )}
 

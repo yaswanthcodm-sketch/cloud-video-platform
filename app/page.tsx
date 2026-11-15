@@ -47,6 +47,7 @@ export default function Home() {
 
   // Modals
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [reuploadVideo, setReuploadVideo] = useState<VideoItem | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [detailModalVideo, setDetailModalVideo] = useState<VideoItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -54,6 +55,11 @@ export default function Home() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleOpenReupload = (video: VideoItem) => {
+    setReuploadVideo(video);
+    setIsUploadOpen(true);
   };
 
   // Check admin session on mount
@@ -298,6 +304,7 @@ export default function Home() {
                 onNextVideo={videos.length > 1 ? handleNextVideo : undefined}
                 onPrevVideo={videos.length > 1 ? handlePrevVideo : undefined}
                 onDeleteVideo={handleDeleteVideo}
+                onReuploadVideo={handleOpenReupload}
                 isAdmin={isAdmin}
               />
             </section>
@@ -311,6 +318,7 @@ export default function Home() {
               onSelectVideo={handleSelectVideo}
               onDeleteVideo={handleDeleteVideo}
               onViewDetails={(v) => setDetailModalVideo(v)}
+              onReuploadVideo={handleOpenReupload}
               sortBy={sortBy}
               onSortChange={setSortBy}
               isAdmin={isAdmin}
@@ -324,8 +332,12 @@ export default function Home() {
       {/* Modals */}
       <CloudUploader
         isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
+        onClose={() => {
+          setIsUploadOpen(false);
+          setReuploadVideo(null);
+        }}
         onVideoCreated={handleVideoCreated}
+        reuploadVideo={reuploadVideo}
       />
 
       <VideoDetailModal
@@ -333,6 +345,7 @@ export default function Home() {
         isOpen={!!detailModalVideo}
         onClose={() => setDetailModalVideo(null)}
         onDeleteVideo={handleDeleteVideo}
+        onReuploadVideo={handleOpenReupload}
         isAdmin={isAdmin}
       />
 
